@@ -22,19 +22,41 @@ pub async fn get_text() -> String {
         .await
         .expect("should create instance");
 
-    let rate_number = instance
-        .get_typed_func::<i32, i32>(&mut store, "add_three")
-        .expect("should get add_three exported function");
-
     let mut text = String::new();
 
-    for number in [15, 8, -20, 162, 1023] {
-        let result = rate_number
-            .call(&mut store, number)
-            .expect("should call add_three");
+    let Some(mem) = instance.get_memory(&mut store, "memory") else {
+        writeln!(text, "Ain't go no memory").unwrap();
+        return text;
+    };
+    //println!("Hewwo???");
 
-        writeln!(text, "{number} + 3 = {result}").unwrap();
+    let rate_number = instance
+        .get_typed_func::<i32, u32>(&mut store, "add_three")
+        .expect("should get add_three exported function");
+
+    let result = rate_number
+        .call(&mut store, 42)
+        .expect("should call add_three");
+
+    writeln!(text, "Result: {result:X}").unwrap();
+
+    let mut buf = vec![0; 10];
+
+    if let Err(e) = mem.read(&mut store, result as _, &mut buf) {
+        // Handle error
+        writeln!(text, "{}", e).unwrap();
+        return text;
     }
+
+    writeln!(text, "And now the bytes:").unwrap();
+
+    for row in buf.chunks(50) {
+        for num in row {
+            write!(text, "{} ", num).unwrap();
+        }
+        writeln!(text).unwrap();
+    }
+
 
     text
 }
